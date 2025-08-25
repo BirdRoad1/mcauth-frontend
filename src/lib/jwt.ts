@@ -1,6 +1,6 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type z from 'zod';
-import { JWTUserDataSchema, JWTUserSchema } from './jwt.schema.js';
+import { JWTUserDataSchema, JWTUserSchema } from '../schema/jwt.schema.js';
 import { env } from '../env/env.js';
 
 function sign(
