@@ -6,7 +6,7 @@ export const corsMiddleware: RequestHandler = (req, res, next) => {
     'Access-Control-Allow-Origin',
     env.NODE_ENV === 'development' ? '*' : env.BASE_URL
   );
-  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type,authorization');
   res.setHeader('Access-Control-Max-Age', '30');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST');
 

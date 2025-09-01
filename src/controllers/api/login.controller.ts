@@ -1,21 +1,26 @@
-import { Router, type Request, type Response } from 'express';
+import {
+  Router,
+  type Request,
+  type Response
+} from 'express';
 import { env } from '../../env/env.js';
 import { passbuildSessionRegistry } from '../../registry/passbuild-session.registry.js';
+import jwt from '../../lib/jwt.js';
 import { pbkdf2 } from '../../lib/pbkdf2.js';
 import * as User from '../../models/user.model.js';
 import type z from 'zod';
-import type { startSignupSchema } from '../../schema/signup.schema.js';
-import jwt from '../../lib/jwt.js';
+import type { startLoginSchema } from '../../schema/login.schema.js';
 
-export const signupRouter = Router();
+export const loginRouter = Router();
 
 const start = async (
-  req: Request<never, never, z.infer<typeof startSignupSchema>>,
+  req: Request<never, never, z.infer<typeof startLoginSchema>>,
   res: Response
 ) => {
   const username = req.body.username;
-  if (await User.getByUsername(username)) {
-    return res.status(409).json({ message: 'The username is already taken' });
+  const existingUser = await User.getByUsername(username);
+  if (!existingUser) {
+    return res.status(409).json({ message: 'The user does not exist' });
   }
 
   let pluginData;
@@ -29,6 +34,7 @@ const start = async (
         callbackUrl: `${env.SERVER_URL}/api/v1/plugin-callback`
       })
     });
+
     if (!pluginRes.ok) {
       console.log(await pluginRes.text());
       return res
@@ -76,13 +82,16 @@ const submit = async (req: Request<{ id: string }>, res: Response) => {
   }
 
   passbuildSessionRegistry.removeSession(id);
-  const user = await User.create(
-    session.username,
-    await pbkdf2.hash(session.passbuild)
-  );
+  const user = await User.getByUsername(session.username);
 
   if (!user) {
-    return res.status(500).json({ message: 'User creation failed' });
+    return res.status(404).json({
+      message: 'The user does not exist'
+    });
+  }
+
+  if ((await pbkdf2.verify(session.passbuild, user.passbuildHash)) !== true) {
+    return res.status(401).json({ message: 'Incorrect passbuild' });
   }
 
   const token = jwt.sign(
@@ -94,11 +103,9 @@ const submit = async (req: Request<{ id: string }>, res: Response) => {
     }
   );
 
-  res.json({ token });
+  res.json({
+    token
+  });
 };
 
-export const signupController = Object.freeze({
-  start,
-  getStatus,
-  submit
-});
+export const loginController = Object.freeze({ start, getStatus, submit });

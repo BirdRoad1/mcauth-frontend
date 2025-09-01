@@ -9,16 +9,28 @@ const app = express();
 
 app.use(corsMiddleware);
 
-app.use(express.json());
-
 app.use('/api/v1', apiRouter);
 
-app
-  .listen(env.PORT, () => {
-    console.log(`Listening on http://localhost:${env.PORT}`);
-    passbuildSessionRegistry.scheduleCleanup();
-  })
-  .on('error', err => {
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.log('Server error', err);
+    res.status(500).json({
+      message: 'Internal server error'
+    });
+  }
+);
+
+app.listen(env.PORT, err => {
+  if (err) {
     console.log(err);
-    process.exit(0);
-  });
+    return process.exit(1);
+  }
+
+  console.log(`Listening on http://localhost:${env.PORT}`);
+  passbuildSessionRegistry.scheduleCleanup();
+});
